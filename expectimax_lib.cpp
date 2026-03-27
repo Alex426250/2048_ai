@@ -1,11 +1,58 @@
 #include <iostream>
 #include <cmath>
+#include <unordered_map>
+#include <cstring>
+#include <functional>
+#include <cstdint>
 
 #ifdef _WIN32
 #define EXPORT extern "C" __declspec(dllexport)
 #else
 #define EXPORT extern "C"
 #endif
+
+// 定义缓存状态字典
+struct CacheState {
+    int grid[16];
+    int depth;
+    bool is_player;
+    double cprob; // 恢复 cprob
+    
+    // 构造函数，用以清除结构体内编译器由于对齐而生成的3字节 padding (垃圾数据越界访问的隐患)
+    CacheState() {
+        std::memset(this, 0, sizeof(CacheState));
+    }
+
+    bool operator==(const CacheState& other) const {
+        if (depth != other.depth || is_player != other.is_player) return false;
+        
+        // 必须与 Hash 函数保证完全一致的量化判断逻辑（严格保持等价的传递性）
+        // 否则会破坏 C++ STL 底层哈希桶的指针分配，直接导致 Access Violation (0x2F) 的终极元凶
+        uint64_t c1 = static_cast<uint64_t>(std::round(cprob * 1e8));
+        uint64_t c2 = static_cast<uint64_t>(std::round(other.cprob * 1e8));
+        if (c1 != c2) return false;
+        
+        return std::memcmp(grid, other.grid, 16 * sizeof(int)) == 0;
+    }
+};
+
+struct CacheStateHash {
+    std::size_t operator()(const CacheState& s) const {
+        std::size_t h = 0;
+        for (int i = 0; i < 16; ++i) {
+            h ^= std::hash<int>()(s.grid[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        }
+        h ^= std::hash<int>()(s.depth) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        h ^= std::hash<bool>()(s.is_player) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        
+        // 强制降维量化为一个极大整数，配合 round 抹平极微小的位级浮点波动
+        uint64_t cprob_quantized = static_cast<uint64_t>(std::round(s.cprob * 1e8));
+        h ^= std::hash<uint64_t>()(cprob_quantized) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+std::unordered_map<CacheState, double, CacheStateHash> transposition_table;
 
 // 权重矩阵
 const double flat_weight_matrix[16] = {
@@ -177,7 +224,11 @@ double evaluate_board(const int grid[16]) {
                         else {
                             if (val_raw > right_raw) {
                                 double diff = (double)(val_raw - right_raw);
+                                if (r == 1) {
+                                    monotonicity_penalty -= diff * 5.0; // 致死级惩罚死角倒挂
+                                } else {
                                 monotonicity_penalty -= diff * 5.0; 
+                                }
                             }
                         }
                     }
@@ -196,7 +247,11 @@ double evaluate_board(const int grid[16]) {
                             if (c == 3) { // 拐角在最右侧 (0,3) -> (1,3), 还有 (2,3) -> (3,3)
                                 if (val_raw < down_raw) {
                                     double diff = (double)(down_raw - val_raw);
-                                    monotonicity_penalty -= diff * 50.0; // 致死级惩罚死角倒挂
+                                    if (r == 0) {
+                                        monotonicity_penalty -= diff * 50.0; // 致死级惩罚死角倒挂
+                                    } else {
+                                    monotonicity_penalty -= diff * 50.0;
+                                    } // 致死级惩罚死角倒挂
                                 }
                             } else {
                                 if (val_raw < down_raw) monotonicity_penalty -= (down_raw - val_raw) * 2;
@@ -226,6 +281,24 @@ double expectimax(const int grid[16], int depth, double cprob, bool is_player_tu
         return evaluate_board(grid);
     }
 
+    // 防爆内存安全锁：完全释放哈希表的 Bucket 内存，而不仅仅是清空元素，预防底层 bad_alloc 导致的库崩溃
+    if (transposition_table.size() > 2000000) {
+        std::unordered_map<CacheState, double, CacheStateHash>().swap(transposition_table);
+    }
+
+    CacheState state; // 这里由于有了我们的新构造函数，内存已经是干净全 0 的了
+    std::memcpy(state.grid, grid, 16 * sizeof(int));
+    state.depth = depth;
+    state.is_player = is_player_turn;
+    state.cprob = cprob;
+
+    auto it = transposition_table.find(state);
+    if (it != transposition_table.end()) {
+        return it->second;
+    }
+
+    double result = 0;
+
     if (is_player_turn) {
         double best_score = -1e15;
         bool moved_any = false;
@@ -240,9 +313,10 @@ double expectimax(const int grid[16], int depth, double cprob, bool is_player_tu
         }
         if (!moved_any) {
             // 游戏结束！没有任何合法移动，必须给予极度严厉的死亡惩罚
-            return -1e15; 
+            result = -1e15; 
+        } else {
+            result = best_score;
         }
-        return best_score;
     } else {
         int empty_cells[16];
         int num_empty = 0;
@@ -252,31 +326,38 @@ double expectimax(const int grid[16], int depth, double cprob, bool is_player_tu
             }
         }
         
-        if (num_empty == 0) return evaluate_board(grid);
-        
-        double expected_score = 0;
-        double prob2 = 0.9 / num_empty;
-        double prob4 = 0.1 / num_empty;
-        
-        for (int i = 0; i < num_empty; i++) {
-            int idx = empty_cells[i];
-            int next_grid[16];
-            for (int k = 0; k < 16; k++) next_grid[k] = grid[k];
+        if (num_empty == 0) {
+            result = evaluate_board(grid);
+        } else {
+            double expected_score = 0;
+            double prob2 = 0.9 / num_empty;
+            double prob4 = 0.1 / num_empty;
             
-            // gen 2
-            next_grid[idx] = 2;
-            expected_score += prob2 * expectimax(next_grid, depth - 1, cprob * prob2, true);
-            
-            // gen 4
-            next_grid[idx] = 4;
-            expected_score += prob4 * expectimax(next_grid, depth - 1, cprob * prob4, true);
+            for (int i = 0; i < num_empty; i++) {
+                int idx = empty_cells[i];
+                int next_grid[16];
+                for (int k = 0; k < 16; k++) next_grid[k] = grid[k];
+                
+                // gen 2
+                next_grid[idx] = 2;
+                expected_score += prob2 * expectimax(next_grid, depth - 1, cprob * prob2, true);
+                
+                // gen 4
+                next_grid[idx] = 4;
+                expected_score += prob4 * expectimax(next_grid, depth - 1, cprob * prob4, true);
+            }
+            result = expected_score;
         }
-        return expected_score;
     }
+
+    transposition_table[state] = result;
+    return result;
 }
 
 // 供 Python ctypes 调用的主入口
 EXPORT int get_best_move_c(int* flat_grid) {
+    std::unordered_map<CacheState, double, CacheStateHash>().swap(transposition_table); // 每次调用彻底清空缓存并释放底层 Bucket 内存
+
     int empty_count = 0;
     for (int i = 0; i < 16; i++) {
         if (flat_grid[i] == 0) empty_count++;
@@ -284,8 +365,7 @@ EXPORT int get_best_move_c(int* flat_grid) {
     
     int current_depth;
     if (empty_count >= 8) {
-        current_depth = 7
-        ;
+        current_depth = 7;
     } else if (empty_count >= 5) {
         current_depth = 8;
     } else {
@@ -294,11 +374,20 @@ EXPORT int get_best_move_c(int* flat_grid) {
     
     double best_score = -1e15;
     int best_move = -1;
+    
+    // Fallback，防止完全没路或者所有路的分数全都是极惩罚分数-1e15，导致 best_move 还是 -1 不走
+    int first_valid_move = -1; 
+    
     int new_grid[16];
     
     for (int direction = 0; direction < 4; direction++) {
         if (simulate_move(flat_grid, direction, new_grid)) {
-            // 起始累计概率 cprob = 1.0
+            // 只要有任何方向可走，将其记录为打底退路
+            if (first_valid_move == -1) {
+                first_valid_move = direction;
+            }
+            
+            // 恢复起始累计概率为 1.0
             double score = expectimax(new_grid, current_depth, 1.0, false);
             // printf("Move %d score: %f\n", direction, score);
             if (score > best_score) {
@@ -306,6 +395,12 @@ EXPORT int get_best_move_c(int* flat_grid) {
                 best_move = direction;
             }
         }
+    }
+    
+    // 如果所有有效移动的 score 都是 -1e15（被认定为必死），best_move 将未能被更新(依然是-1)。
+    // 这种情况下，我们强制走我们发现的第一个有效移动，站着死不如走完最后一步。
+    if (best_move == -1 && first_valid_move != -1) {
+        best_move = first_valid_move;
     }
     
     return best_move;
