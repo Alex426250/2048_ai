@@ -87,6 +87,18 @@ class GUI2048(tk.Tk):
                 row_cells.append(label)
             self.cells.append(row_cells)
             
+        # 居中显示的 Game Over 标签 (初始隐藏)
+        self.game_over_label = tk.Label(
+            self.board_frame, 
+            text="Game Over!", 
+            font=("Helvetica", 36, "bold"), 
+            bg=COLORS['bg'], 
+            fg="black", 
+            bd=0, 
+            highlightthickness=0, 
+            relief="flat"
+        )
+            
         # 底部控制面板
         bottom_frame = tk.Frame(self, bg=COLORS['bg'])
         bottom_frame.pack(fill=tk.X, padx=10, pady=5)
@@ -113,9 +125,13 @@ class GUI2048(tk.Tk):
         self.update_idletasks()
         
         if self.game.is_game_over():
-            self.score_label.config(text=f"Game Over! Score: {self.game.score}")
+            # 获取 board_frame 的准确底色以实现无缝融合
+            self.game_over_label.config(bg=self.board_frame.cget("bg"))
+            self.game_over_label.place(relx=0.5, rely=0.5, anchor="center")
             self.ai_enabled = False
             self.ai_btn.config(text="Start AI")
+        else:
+            self.game_over_label.place_forget()
 
     def toggle_ai(self):
         self.ai_enabled = not self.ai_enabled
