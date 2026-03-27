@@ -63,6 +63,9 @@ class GUI2048(tk.Tk):
         step_frame = tk.Frame(self, bg=COLORS['bg'])
         step_frame.pack(fill=tk.X, padx=10, pady=5)
         
+        self.prev_10_btn = tk.Button(step_frame, text="⏮ 退十步", font=("Helvetica", 10), command=self.step_backward_10)
+        self.prev_10_btn.pack(side=tk.LEFT, padx=5)
+        
         self.prev_btn = tk.Button(step_frame, text="⏪ 退一步", font=("Helvetica", 10), command=self.step_backward)
         self.prev_btn.pack(side=tk.LEFT, padx=5)
         
@@ -83,6 +86,13 @@ class GUI2048(tk.Tk):
                 label.place(relx=0.5, rely=0.5, anchor="center")
                 row_cells.append(label)
             self.cells.append(row_cells)
+            
+        # 底部控制面板
+        bottom_frame = tk.Frame(self, bg=COLORS['bg'])
+        bottom_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        self.custom_btn = tk.Button(bottom_frame, text="自定义盘面", font=("Helvetica", 10), command=self.open_custom_board_dialog)
+        self.custom_btn.pack(side=tk.LEFT, padx=5)
 
     def update_ui(self):
         self.score_label.config(text=f"Score: {self.game.score}")
@@ -154,6 +164,45 @@ class GUI2048(tk.Tk):
         self.game.score = prev_score
         self.steps = prev_steps
         self.update_ui()
+
+    def step_backward_10(self):
+        if self.ai_enabled or not self.history:
+            return
+
+        steps_to_undo = min(10, len(self.history))
+        for _ in range(steps_to_undo):
+            self.future_history.append((copy.deepcopy(self.game.grid), self.game.score, self.steps))
+            prev_grid, prev_score, prev_steps = self.history.pop()
+            self.game.grid = copy.deepcopy(prev_grid)
+            self.game.score = prev_score
+            self.steps = prev_steps
+
+        self.update_ui()
+
+    def open_custom_board_dialog(self):
+        from tkinter import simpledialog, messagebox
+        import re
+        if self.ai_enabled:
+            return
+
+        user_input = simpledialog.askstring("自定义盘面", "请输入16个数字，用逗号或空格分隔（顺序为从左到右、从上到下）：\n0表示空", parent=self)
+        if user_input is not None:
+            try:
+                nums = [int(x) for x in re.split(r'[, \t]+', user_input.strip()) if x]
+                if len(nums) == 16:
+                    self.save_state()
+                    self.future_history.clear()
+                    
+                    new_grid = []
+                    for i in range(4):
+                        new_grid.append(nums[i*4:(i+1)*4])
+                    
+                    self.game.grid = new_grid
+                    self.update_ui()
+                else:
+                    messagebox.showerror("错误", f"必须输入恰好16个数字！你输入了{len(nums)}个。")
+            except ValueError:
+                messagebox.showerror("错误", "输入包含非数字内容！")
 
     def ai_move(self):
         if not self.ai_enabled:
