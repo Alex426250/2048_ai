@@ -18,6 +18,11 @@ COLORS = {
     512: '#edc850',
     1024: '#edc53f',
     2048: '#edc22e',
+    4096: '#3c3a32',
+    8192: '#3c3a32',
+    16384: '#3c3a32',
+    32768: '#3c3a32',
+    65536: '#3c3a32',
 }
 
 FG_COLORS = {
@@ -117,7 +122,7 @@ class GUI2048(tk.Tk):
                     label.config(text="", bg=COLORS['cell_empty'])
                     label.master.config(bg=COLORS['cell_empty'])
                 else:
-                    bg_color = COLORS.get(val, COLORS[2048])
+                    bg_color = COLORS.get(val, '#3c3a32')
                     fg_color = FG_COLORS.get(val, FG_COLORS['default'])
                     label.config(text=str(val), bg=bg_color, fg=fg_color)
                     label.master.config(bg=bg_color)
@@ -232,7 +237,7 @@ class GUI2048(tk.Tk):
             self.game.score = next_score
             self.steps = next_steps
             self.update_ui()
-            self.after(10, self.ai_move)
+            self.after(1, self.ai_move)
         else:
             if self.game.is_game_over():
                 self.ai_enabled = False
@@ -245,7 +250,7 @@ class GUI2048(tk.Tk):
                 if self.game.move(best_dir):
                     self.steps += 1
                     self.update_ui()
-                    self.after(10, self.ai_move)
+                    self.after(1, self.ai_move)
                 else:
                     self.history.pop()
                     self.ai_enabled = False
