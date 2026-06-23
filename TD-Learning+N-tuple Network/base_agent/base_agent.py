@@ -95,7 +95,7 @@ if __name__ == "__main__":
     if agent.load_model(model_path):
         print(f"已加载现有模型: {model_path}，继续进化...")
     else:
-        print("未找到已有模型，从头开始炼丹...")
+        print("未找到已有模型，从头开始训练...")
         
     data_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data_base.txt")
     print("开始极速训练（预定总量 10,000,000 episodes，按 Ctrl+C 可中止保存）...")
@@ -123,4 +123,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print("\n停止训练。正在保存模型...")
         agent.save_model(model_path)
-        print("模型已保存！请现在运行 main_gui.py 使用此脑容量查看效果。")
+        print("模型已保存！请现在运行 main_gui.py 使用此模型查看效果。")
