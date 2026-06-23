@@ -56,6 +56,7 @@ g++ -O3 -shared -fPIC -march=native -fopenmp 16k8k4k_agent/16k8k4k_agent.cpp -o 
 - `python base_agent/base_agent.py`: 训练 `base` 模型。
 - `python 8k4k_agent/8k4k_agent.py`: 训练 `8k4k` 模型。
 - `python 16k8k4k_agent/16k8k4k_agent.py`: 训练 `16k8k4k` 模型。
+  
 *注：如果想从头开始训练模型，需要先删除已有的模型。*
 
 ---
