@@ -70,7 +70,7 @@ def worker_run(args):
         
         # 打完一局立刻写入（追加模式，不覆盖）
         global_index = worker_id * num_games + i + 1
-        with open("data_1000_games.txt", "a", encoding="utf-8") as f:
+        with open("data_10000_games.txt", "a", encoding="utf-8") as f:
             f.write(f"{global_index} {game.score} {max_val}\n")
             
         # 避免刷屏，每10局或者出了超大数字再单独打印
@@ -81,7 +81,7 @@ def worker_run(args):
     return results
 
 if __name__ == "__main__":
-    TOTAL_GAMES = 1000
+    TOTAL_GAMES = 10000
     NUM_CORES = 5
     games_per_worker = TOTAL_GAMES // NUM_CORES
 
