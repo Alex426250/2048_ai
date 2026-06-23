@@ -47,7 +47,6 @@ public:
         const auto& base = get_base_patterns();
         const auto& lut_sizes = get_lut_sizes();
         for (int i=0; i<LUT_GROUP_COUNT; i++) lut[i].assign(lut_sizes[i], 0.0f);
-        TransformFunc trans[8] = { trans_0, trans_1, trans_2, trans_3, trans_4, trans_5, trans_6, trans_7 };
         for (int i=0; i<(int)base.size(); i++) {
             set<vector<int>> st;
             for (int t=0; t<8; t++) {
@@ -81,45 +80,24 @@ public:
         if (r < 98) return 8;
         return 16;
     }
-
     void init_random_snapshots() {
         if (snapshot_pool.empty()) snapshot_pool.reserve(1000);
-        TransformFunc trans[8] = { trans_0, trans_1, trans_2, trans_3, trans_4, trans_5, trans_6, trans_7 };
         while (snapshot_pool.size() < 1000) {
             vector<int> b(16, 0);
-            int pos_32768 = 0;
-            int pos_16384 = 1;
-            int pos_4096 = 2;
             int mode = rand() % 10;
-            if (mode < 9) {
-                int t = rand() % 8;
-                pair<int, int> p32768 = trans[t](0, 0);
-                pair<int, int> p16384 = trans[t](0, 1);
-                pair<int, int> p4096 = trans[t](0, 2);
-                pos_32768 = p32768.first * 4 + p32768.second;
-                pos_16384 = p16384.first * 4 + p16384.second;
-                pos_4096 = p4096.first * 4 + p4096.second;
-            }      
+            if (mode < 9) b[0] = 32768, b[1] = 16384, b[2] = 4096;
             else {
                 int slots[16];
                 for (int i = 0; i < 16; i++) slots[i] = i;
                 for (int i = 15; i > 0; i--) {
                     int j = rand() % (i + 1);
-                    int tmp = slots[i];
-                    slots[i] = slots[j];
-                    slots[j] = tmp;
+                    std::swap(slots[i], slots[j]);
                 }
-                pos_32768 = slots[0];
-                pos_16384 = slots[1];
-                pos_4096 = slots[2];
+                b[slots[0]] = 32768;
+                b[slots[1]] = 16384;
+                b[slots[2]] = 4096;
             }
-            b[pos_32768] = 32768;
-            b[pos_16384] = 16384;
-            b[pos_4096] = 4096;
-            for (int i = 0; i < 16; i++) {
-                if (b[i]) continue;
-                b[i] = random_small_tile();
-            }
+            for (int i = 0; i < 16; i++) if (!b[i]) b[i] = random_small_tile();
             snapshot_pool.push_back(b);
         }
     }
