@@ -28,19 +28,16 @@
         for(const auto& f : features) lut[f.group][get_index(p, f)] += adj;
     }
 
-    int tt_version = 0;
     struct HashEntry {
         std::atomic<board_t> key;
         std::atomic<int> depth;
         std::atomic<double> value;
-        std::atomic<int> version;
 
-        HashEntry() : key(0), depth(0), value(0.0), version(0) {}
+        HashEntry() : key(0), depth(0), value(0.0) {}
         HashEntry(const HashEntry& o) {
             key.store(o.key.load(std::memory_order_relaxed), std::memory_order_relaxed);
             depth.store(o.depth.load(std::memory_order_relaxed), std::memory_order_relaxed);
             value.store(o.value.load(std::memory_order_relaxed), std::memory_order_relaxed);
-            version.store(o.version.load(std::memory_order_relaxed), std::memory_order_relaxed);
         }
     };
     vector<HashEntry> tt_pre;
@@ -58,8 +55,7 @@
     double expectimax_afterstate(board_t bb, int depth) {
         if (depth == 0) return evaluate(bb);
         int tt_idx = murmurhash3(bb) & 0xFFFFF;
-        if (tt_after[tt_idx].version.load(std::memory_order_relaxed) == tt_version && 
-            tt_after[tt_idx].key.load(std::memory_order_relaxed) == bb && 
+        if (tt_after[tt_idx].key.load(std::memory_order_relaxed) == bb && 
             tt_after[tt_idx].depth.load(std::memory_order_relaxed) == depth) {
             return tt_after[tt_idx].value.load(std::memory_order_relaxed);
         }
@@ -80,14 +76,12 @@
         tt_after[tt_idx].key.store(bb, std::memory_order_relaxed);
         tt_after[tt_idx].depth.store(depth, std::memory_order_relaxed);
         tt_after[tt_idx].value.store(v, std::memory_order_relaxed);
-        tt_after[tt_idx].version.store(tt_version, std::memory_order_relaxed);
         return v;
     }
 
     double max_player_value(board_t bb, int depth) {
         int tt_idx = murmurhash3(bb) & 0xFFFFF;
-        if (tt_pre[tt_idx].version.load(std::memory_order_relaxed) == tt_version && 
-            tt_pre[tt_idx].key.load(std::memory_order_relaxed) == bb && 
+        if (tt_pre[tt_idx].key.load(std::memory_order_relaxed) == bb && 
             tt_pre[tt_idx].depth.load(std::memory_order_relaxed) == depth) {
             return tt_pre[tt_idx].value.load(std::memory_order_relaxed);
         }
@@ -106,7 +100,6 @@
         tt_pre[tt_idx].key.store(bb, std::memory_order_relaxed);
         tt_pre[tt_idx].depth.store(depth, std::memory_order_relaxed);
         tt_pre[tt_idx].value.store(best_v, std::memory_order_relaxed);
-        tt_pre[tt_idx].version.store(tt_version, std::memory_order_relaxed);
         return best_v;
     }
 
@@ -149,13 +142,11 @@
             }
         }
         if (best_greedy_dir != -1) return best_greedy_dir;
-        
-        unsigned int tile_mask = 0;
         int depth = 3;
+        unsigned int tile_mask = 0;
         for (int i = 0; i < 16; i++) if (grid[i] >= 256) tile_mask |= grid[i];
         int count_distinct = __builtin_popcount(tile_mask);
-        if (count_distinct >= 5) depth = 4;
-        tt_version++;
+        //if (count_distinct >= 5) depth = 4;
 
         if (tt_pre.empty()) {
             tt_pre.resize(1048576);
