@@ -90,20 +90,14 @@ public:
             int pos_16384 = rand() % 16;
             int pos_4096 = rand() % 15;
             int mode = rand() % 10;
-            if (mode < 9) {
-                int t = rand() % 8;
-                pair<int, int> p16384 = trans[t](0, 0);
-                pair<int, int> p4096= trans[t](0, 1);
-                pos_16384 = p16384.first * 4 + p16384.second;
-                pos_4096 = p4096.first * 4 + p4096.second;
-            }      
-            else if (pos_4096 >= pos_16384) pos_4096++;
-            b[pos_16384] = 16384;
-            b[pos_4096] = 4096;
-            for (int i = 0; i < 16; i++) {
-                if (b[i]) continue;
-                b[i] = random_small_tile();
+            if (mode < 9) b[0] = 16384, b[1] = 4096;
+            else {
+                int pos1 = rand() % 16;
+                int pos2 = rand() % 15;
+                if (pos2 >= pos1) pos2++;
+                b[pos1] = 16384, b[pos2] = 4096;
             }
+            for (int i = 0; i < 16; i++) if (!b[i]) b[i] = random_small_tile();
             snapshot_pool.push_back(b);
         }
     }
@@ -199,5 +193,3 @@ extern "C" {
         return true;
     }
 }
-
-
