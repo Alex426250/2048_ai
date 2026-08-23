@@ -43,9 +43,9 @@ git clone https://github.com/Alex426250/2048_ai.git
 进入 `2048_4x4`：
 
 ```bash
-g++ -O3 -flto -shared -fPIC -march=native -fopenmp base_agent/base_agent.cpp -o base_agent/base_agent.dll
-g++ -O3 -flto -shared -fPIC -march=native -fopenmp 8k4k_agent/8k4k_agent.cpp -o 8k4k_agent/8k4k_agent.dll
-g++ -O3 -flto -shared -fPIC -march=native -fopenmp 16k8k4k_agent/16k8k4k_agent.cpp -o 16k8k4k_agent/16k8k4k_agent.dll
+g++ -O3 -flto -shared -fPIC -march=native -std=c++17 -fopenmp base_agent/base_agent.cpp -o base_agent/base_agent.dll
+g++ -O3 -flto -shared -fPIC -march=native -std=c++17 -fopenmp 8k4k_agent/8k4k_agent.cpp -o 8k4k_agent/8k4k_agent.dll
+g++ -O3 -flto -shared -fPIC -march=native -std=c++17 -fopenmp 16k8k4k_agent/16k8k4k_agent.cpp -o 16k8k4k_agent/16k8k4k_agent.dll
 ```
 
 4x4 后端每局搜索最多使用 4 个 OpenMP 线程，适合与 `measure_10000_games.py` 的多进程 worker 并行运行。
@@ -55,8 +55,8 @@ g++ -O3 -flto -shared -fPIC -march=native -fopenmp 16k8k4k_agent/16k8k4k_agent.c
 进入 `2048_3x4`：
 
 ```bash
-g++ -O3 -shared -fPIC -march=native -fopenmp base_agent/base_agent.cpp -o base_agent/base_agent.dll
-g++ -O3 -shared -fPIC -march=native -fopenmp 2k1k_agent/2k1k_agent.cpp -o 2k1k_agent/2k1k_agent.dll
+g++ -O3 -shared -fPIC -march=native -std=c++17 -fopenmp base_agent/base_agent.cpp -o base_agent/base_agent.dll
+g++ -O3 -shared -fPIC -march=native -std=c++17 -fopenmp 2k1k_agent/2k1k_agent.cpp -o 2k1k_agent/2k1k_agent.dll
 ```
 
 ### 3. 编译 3x3 与 2x4 胜率表查询器
@@ -66,7 +66,7 @@ g++ -O3 -shared -fPIC -march=native -fopenmp 2k1k_agent/2k1k_agent.cpp -o 2k1k_a
 ```bash
 g++ -O3 -march=native -std=c++17 -Wall -Wextra -pthread build_3x3_table.cpp -o build_3x3_table.exe
 g++ -O3 -march=native -std=c++17 -Wall -Wextra -pthread query_3x3.cpp -o query_3x3.exe
-g++ -O3 -shared -fPIC -march=native query_3x3.cpp -o query_3x3.dll
+g++ -O3 -shared -fPIC -march=native -std=c++17 query_3x3.cpp -o query_3x3.dll
 ```
 
 进入 `2048_2x4`：
@@ -74,7 +74,7 @@ g++ -O3 -shared -fPIC -march=native query_3x3.cpp -o query_3x3.dll
 ```bash
 g++ -O3 -march=native -std=c++17 -Wall -Wextra -pthread build_2x4_table.cpp -o build_2x4_table.exe
 g++ -O3 -march=native -std=c++17 -Wall -Wextra -pthread query_2x4.cpp -o query_2x4.exe
-g++ -O3 -shared -fPIC -march=native query_2x4.cpp -o query_2x4.dll
+g++ -O3 -shared -fPIC -march=native -std=c++17 query_2x4.cpp -o query_2x4.dll
 ```
 
 若缺少表文件，可构建：
@@ -94,24 +94,24 @@ cd ../2048_2x4
 三个残局目录均需分别编译查询器 DLL、命令行查询器和构表程序。以 `endgame_L3t` 为例：
 
 ```bash
-g++ -O3 -march=native query_L3t.cpp -o query_L3t.exe
-g++ -O3 -shared -fPIC -march=native query_L3t.cpp -o query_L3t.dll
+g++ -O3 -march=native -std=c++17 query_L3t.cpp -o query_L3t.exe
+g++ -O3 -shared -fPIC -march=native -std=c++17 query_L3t.cpp -o query_L3t.dll
 g++ -O3 -march=native -std=c++17 -pthread build_L3t_table.cpp -o build_L3t_table.exe
 ```
 
 `endgame_442t`：
 
 ```bash
-g++ -O3 -march=native query_442t.cpp -o query_442t.exe
-g++ -O3 -shared -fPIC -march=native query_442t.cpp -o query_442t.dll
+g++ -O3 -march=native -std=c++17 query_442t.cpp -o query_442t.exe
+g++ -O3 -shared -fPIC -march=native -std=c++17 query_442t.cpp -o query_442t.dll
 g++ -O3 -march=native -std=c++17 -pthread build_442t_table.cpp -o build_442t_table.exe
 ```
 
 `endgame_T`：
 
 ```bash
-g++ -O3 -march=native query_T.cpp -o query_T.exe
-g++ -O3 -shared -fPIC -march=native query_T.cpp -o query_T.dll
+g++ -O3 -march=native -std=c++17 query_T.cpp -o query_T.exe
+g++ -O3 -shared -fPIC -march=native -std=c++17 query_T.cpp -o query_T.dll
 g++ -O3 -march=native -std=c++17 -pthread build_T_table.cpp -o build_T_table.exe
 ```
 
