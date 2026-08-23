@@ -76,6 +76,8 @@ class Game2048:
         direction: 0=上, 1=下, 2=左, 3=右
         返回 (new_board, score)
         """
+        if direction not in (0, 1, 2, 3):
+            raise ValueError(f"invalid direction: {direction}")
         rows = len(grid_board)
         cols = len(grid_board[0]) if rows > 0 else 0
         new_board = [[0] * cols for _ in range(rows)]
