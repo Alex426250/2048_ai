@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.dll
+*.exe
+*.o
+.vscode/*
+!/.vscode/settings.json
+!2048_4x4/.vscode/tasks.json
+endgame_L3t/l3ttmp/
+endgame_442t/442ttmp/
+endgame_T/ttmp/

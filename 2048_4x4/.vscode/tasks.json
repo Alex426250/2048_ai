@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Compile DLL",
+			"type": "shell",
+			"command": "g++ -O3 -shared -fPIC td_agent_cs_8192_4096_lib.cpp -o td_agent_cs_8192_4096_lib.dll",
+			"isBackground": false
+		}
+	]
+}
